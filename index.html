@@ -6,60 +6,42 @@
 <title>Inventario PRO</title>
 
 <style>
-:root{
-  --bg:#0f172a;
-  --card:#1e293b;
-  --text:#fff;
-  --btn:#22c55e;
-}
-
-/* 🌙 OSCURO */
-.dark{
-  --bg:#0f172a;
-  --card:#1e293b;
-  --text:#fff;
-  --btn:#22c55e;
-}
-
-/* 🔵 AZUL CLARO */
-.light{
-  --bg:#e0f2fe;
-  --card:#bae6fd;
-  --text:#020617;
-  --btn:#0284c7;
-}
-
 body{
   margin:0;
   font-family:sans-serif;
-  background:var(--bg);
-  color:var(--text);
+  background:#0f172a;
+  color:#fff;
+  transition:.3s;
 }
+.light{background:#e2e8f0;color:#000;}
 
 header{
   padding:15px;
   text-align:center;
-  background:var(--card);
-  position:sticky;
-  top:0;
+  background:#1e293b;
+  position:relative;
+}
+.theme{
+  position:absolute;
+  right:10px;
+  top:10px;
 }
 
-.container{padding:15px;max-width:600px;margin:auto;}
+.container{padding:15px;}
 
 .card{
-  background:var(--card);
+  background:#1e293b;
   padding:15px;
   margin:10px 0;
-  border-radius:12px;
+  border-radius:15px;
 }
 
 button{
-  background:var(--btn);
+  background:#22c55e;
   border:none;
   padding:10px;
   border-radius:10px;
-  margin:5px;
-  color:#fff;
+  margin:3px;
   cursor:pointer;
 }
 
@@ -68,67 +50,73 @@ input{
   border-radius:10px;
   border:none;
   margin:5px;
-  width:100%;
-  background:var(--card);
-  color:var(--text);
 }
 
-.row{display:flex;gap:10px;margin-bottom:10px;}
-.qty{width:70px;text-align:center;}
 .hidden{display:none;}
 
-#btnAdd{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:55px;
-  height:55px;
-  border-radius:50%;
-  font-size:24px;
+.row{
+  display:flex;
+  align-items:center;
+  margin-bottom:10px;
 }
 
-/* BOTÓN TEMA */
-#temaBtn{
-  position:absolute;
-  right:10px;
-  top:10px;
+.row input[type="text"]{
+  flex:1;
+  margin-right:5px;
+}
+
+.qty{
+  width:70px;
+  text-align:center;
 }
 </style>
 </head>
 
-<body class="dark">
+<body>
 
 <header>
 Inventario PRO
-<button id="temaBtn" onclick="cambiarTema()">🎨</button>
+<button class="theme" onclick="tema()">🎨</button>
 </header>
 
+<!-- HOME -->
 <div class="container" id="home">
 <input id="nombre" placeholder="Nombre lista">
 <button onclick="crear()">Crear</button>
+
 <h3>Listas</h3>
 <div id="listas"></div>
 </div>
 
+<!-- DETALLE -->
 <div class="container hidden" id="detalle">
-<button id="btnVolver" onclick="volver()">⬅</button>
-<button id="btnCompartir" onclick="compartir()">📤</button>
+
+<div id="acciones">
+<button id="btnVolver" onclick="volver()">⬅ Volver</button>
+<button id="btnCompartir" onclick="compartir()">📤 Compartir</button>
+</div>
 
 <h3 id="titulo"></h3>
 <div id="contenido"></div>
 
-<button id="btnAdd" onclick="agregar()">➕</button>
+<div id="agregarBox">
+<input id="nuevo" placeholder="Artículo">
+<button onclick="agregar()">+</button>
+</div>
+
 </div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// 🔥 FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyCVjGdI5Z3fW8bjHwfBgT5RoOfZZ4Vap8c",
   authDomain: "checklistempresa.firebaseapp.com",
   projectId: "checklistempresa",
-  storageBucket: "checklistempresa.appspot.com",
+  storageBucket: "checklistempresa.firebasestorage.app",
   messagingSenderId: "798095528680",
   appId: "1:798095528680:web:3114c0b18d5b8001826f5d"
 };
@@ -137,196 +125,205 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let actualId=null;
-let modoVista=false;
+let modoVista=false; // false = creador, "llenar", true = ver
 
-// 🎨 CAMBIAR TEMA
-window.cambiarTema=()=>{
-  let body=document.body;
-  if(body.classList.contains("dark")){
-    body.classList.remove("dark");
-    body.classList.add("light");
-    localStorage.setItem("tema","light");
-  }else{
-    body.classList.remove("light");
-    body.classList.add("dark");
-    localStorage.setItem("tema","dark");
-  }
-};
-
-// CARGAR TEMA
-let t=localStorage.getItem("tema");
-if(t){
-  document.body.className=t;
-}
+// 🎨 TEMA
+window.tema=()=>document.body.classList.toggle("light");
 
 // CREAR
 window.crear=async()=>{
-let n=nombre.value.trim();
-if(!n)return;
-
-await addDoc(collection(db,"listas"),{
-  nombre:n,
-  items:[],
-  estado:"pendiente"
-});
-
-nombre.value="";
-cargar();
+  let n=nombre.value.trim();
+  if(!n)return;
+  await addDoc(collection(db,"listas"),{nombre:n,items:[]});
+  nombre.value="";
+  cargar();
 };
 
 // CARGAR
 async function cargar(){
-listas.innerHTML="";
-let snap=await getDocs(collection(db,"listas"));
+  listas.innerHTML="";
+  let snap=await getDocs(collection(db,"listas"));
 
-snap.forEach(docu=>{
-let d=docu.data();
-
-listas.innerHTML+=`
-<div class="card" onclick="abrir('${docu.id}')">
-<div>${d.nombre}</div>
-<div>Estado: ${d.estado || "pendiente"}</div>
-
-${modoVista===false?`
-<button onclick="event.stopPropagation(); borrarLista('${docu.id}')">🗑️</button>
-`:``}
-
-</div>`;
-});
+  snap.forEach(docu=>{
+    let d=docu.data();
+    listas.innerHTML+=`
+    <div class="card">
+      <div onclick="abrir('${docu.id}')">${d.nombre}</div>
+      ${modoVista===false?`
+      <button onclick="editarLista('${docu.id}','${d.nombre}')">✏️</button>
+      <button onclick="borrarLista('${docu.id}')">🗑️</button>
+      `:""}
+    </div>`;
+  });
 }
 
 // ABRIR
 window.abrir=async(id)=>{
-actualId=id;
-home.classList.add("hidden");
-detalle.classList.remove("hidden");
+  actualId=id;
+  home.classList.add("hidden");
+  detalle.classList.remove("hidden");
 
-let snap=await getDoc(doc(db,"listas",id));
-let d=snap.data();
+  let snap=await getDoc(doc(db,"listas",id));
+  let d=snap.data();
 
-titulo.innerText=d.nombre;
+  titulo.innerText=d.nombre;
 
-// CONTROL BOTONES
-if(modoVista===false){
-btnVolver.style.display="inline-block";
-btnCompartir.style.display="inline-block";
-btnAdd.style.display="block";
-}else{
-btnVolver.style.display="none";
-btnCompartir.style.display="none";
-btnAdd.style.display="none";
-}
+  // UI por modo
+  if(modoVista==="llenar"){
+    btnVolver.style.display="none";
+  }
 
-render(d.items);
+  if(modoVista===true){
+    agregarBox.style.display="none";
+    btnCompartir.style.display="none";
+  }
+
+  render(d.items);
 };
 
 // RENDER
 function render(items){
-contenido.innerHTML="";
-let total=[...items];
+  contenido.innerHTML="";
 
-if(modoVista==="llenar"){
-for(let i=0;i<5;i++){
-total.push({texto:"",cantidad:0});
-}
-}
+  items.forEach((it,i)=>{
+    contenido.innerHTML+=`
+    <div class="row">
+      <input type="text" value="${it.texto}" 
+      ${modoVista!==false?"readonly":""}
+      onchange="editar(${i},this.value)">
 
-total.forEach((it,i)=>{
-contenido.innerHTML+=`
-<div class="row">
+      <input class="qty" type="number" value="${it.cantidad}" 
+      ${modoVista===true?"readonly":""}
+      onchange="cambiar(${i},this.value)">
 
-<input type="text" value="${it.texto || ""}"
-${modoVista!==false?"disabled":""}
-onchange="editarTexto(${i},this.value)">
+      ${modoVista===false?`<button onclick="borrar(${i})">🗑️</button>`:""}
+    </div>`;
+  });
 
-<input class="qty" type="number" value="${it.cantidad || 0}"
-${modoVista===true?"disabled":""}
-onchange="cambiar(${i},this.value)">
-
-</div>`;
-});
+  // ✍️ 5 líneas extra SOLO llenador
+  if(modoVista==="llenar"){
+    for(let i=0;i<5;i++){
+      contenido.innerHTML+=`
+      <div class="row">
+        <input type="text" placeholder="Nuevo artículo" onchange="nuevoExtra(this)">
+        <input class="qty" type="number" value="0" onchange="cantidadExtra(this)">
+      </div>`;
+    }
+  }
 }
 
 // AGREGAR
 window.agregar=async()=>{
-if(modoVista!==false)return;
+  if(modoVista!==false)return;
 
-let txt=prompt("Nuevo artículo:");
-if(!txt)return;
+  let txt=nuevo.value.trim();
+  if(!txt)return;
 
-let ref=doc(db,"listas",actualId);
-let snap=await getDoc(ref);
-let d=snap.data();
+  let ref=doc(db,"listas",actualId);
+  let snap=await getDoc(ref);
+  let d=snap.data();
 
-d.items.push({texto:txt,cantidad:1});
-await updateDoc(ref,{items:d.items});
-render(d.items);
+  d.items.push({texto:txt,cantidad:1});
+  await updateDoc(ref,{items:d.items});
+  nuevo.value="";
+  render(d.items);
 };
 
 // CAMBIAR
 window.cambiar=async(i,val)=>{
-let ref=doc(db,"listas",actualId);
-let snap=await getDoc(ref);
-let d=snap.data();
+  let ref=doc(db,"listas",actualId);
+  let snap=await getDoc(ref);
+  let d=snap.data();
 
-if(i>=d.items.length){
-if(!val)return;
-d.items.push({texto:"",cantidad:Number(val)});
-}else{
-d.items[i].cantidad=Number(val);
-}
-
-d.estado="terminado";
-
-await updateDoc(ref,{items:d.items,estado:d.estado});
+  d.items[i].cantidad=Number(val);
+  await updateDoc(ref,{items:d.items});
 };
 
 // EDITAR TEXTO
-window.editarTexto=async(i,val)=>{
-if(modoVista!==false)return;
+window.editar=async(i,val)=>{
+  if(modoVista!==false)return;
 
-let ref=doc(db,"listas",actualId);
-let snap=await getDoc(ref);
-let d=snap.data();
+  let ref=doc(db,"listas",actualId);
+  let snap=await getDoc(ref);
+  let d=snap.data();
 
-d.items[i].texto=val;
-
-await updateDoc(ref,{items:d.items});
+  d.items[i].texto=val;
+  await updateDoc(ref,{items:d.items});
 };
 
-// BORRAR
+// BORRAR ITEM
+window.borrar=async(i)=>{
+  let ref=doc(db,"listas",actualId);
+  let snap=await getDoc(ref);
+  let d=snap.data();
+
+  d.items.splice(i,1);
+  await updateDoc(ref,{items:d.items});
+  render(d.items);
+};
+
+// LISTAS
 window.borrarLista=async(id)=>{
-await deleteDoc(doc(db,"listas",id));
-cargar();
+  await deleteDoc(doc(db,"listas",id));
+  cargar();
 };
 
-// COMPARTIR
+window.editarLista=async(id,n)=>{
+  let nuevo=prompt("Nuevo nombre:",n);
+  if(!nuevo)return;
+  await updateDoc(doc(db,"listas",id),{nombre:nuevo});
+  cargar();
+};
+
+// 📤 COMPARTIR INTELIGENTE
 window.compartir=()=>{
-let url=location.origin+location.pathname+"?id="+actualId+"&modo=llenar";
-navigator.share ? navigator.share({url}) : navigator.clipboard.writeText(url);
+
+  let url="";
+
+  if(modoVista===false){
+    url=location.origin+location.pathname+"?id="+actualId+"&modo=llenar";
+  }
+  else if(modoVista==="llenar"){
+    url=location.origin+location.pathname+"?id="+actualId+"&modo=ver";
+  }
+  else{
+    return;
+  }
+
+  if(navigator.share){
+    navigator.share({
+      title:"Inventario PRO",
+      text:"Lista",
+      url:url
+    });
+  }else{
+    navigator.clipboard.writeText(url);
+    alert("Link copiado");
+  }
 };
 
 // VOLVER
 window.volver=()=>location.href=location.pathname;
 
 // INIT
-function init(){
-let p=new URLSearchParams(location.search);
-let id=p.get("id");
-let tipo=p.get("modo");
+async function init(){
+  let p=new URLSearchParams(location.search);
+  let id=p.get("id");
+  let tipo=p.get("modo");
 
-if(id){
-if(tipo==="llenar")modoVista="llenar";
-else if(tipo==="ver")modoVista=true;
-else modoVista=false;
+  if(id){
+    if(tipo==="llenar") modoVista="llenar";
+    else if(tipo==="ver") modoVista=true;
+    else modoVista=false;
 
-abrir(id);
-}else{
-cargar();
-}
+    abrir(id);
+  }else{
+    cargar();
+  }
 }
 
 init();
+
 </script>
 
 </body>
