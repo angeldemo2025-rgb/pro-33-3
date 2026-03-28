@@ -6,57 +6,77 @@
 <title>Inventario PRO</title>
 
 <style>
-*{box-sizing:border-box;}
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#fff;
+  --btn:#22c55e;
+}
+
+/* 🌙 OSCURO */
+.dark{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#fff;
+  --btn:#22c55e;
+}
+
+/* 🔵 AZUL CLARO */
+.light{
+  --bg:#e0f2fe;
+  --card:#bae6fd;
+  --text:#020617;
+  --btn:#0284c7;
+}
+
 body{
   margin:0;
   font-family:sans-serif;
-  background: linear-gradient(135deg,#0f172a,#020617);
-  color:#fff;
+  background:var(--bg);
+  color:var(--text);
 }
+
 header{
-  padding:18px;
+  padding:15px;
   text-align:center;
-  background: rgba(30,41,59,0.8);
-  backdrop-filter: blur(10px);
-  font-size:20px;
-  font-weight:bold;
+  background:var(--card);
   position:sticky;
   top:0;
 }
+
 .container{padding:15px;max-width:600px;margin:auto;}
+
 .card{
-  background: rgba(30,41,59,0.7);
+  background:var(--card);
   padding:15px;
   margin:10px 0;
-  border-radius:14px;
+  border-radius:12px;
 }
+
 button{
-  background:#22c55e;
+  background:var(--btn);
   border:none;
   padding:10px;
   border-radius:10px;
-  margin:4px;
+  margin:5px;
   color:#fff;
   cursor:pointer;
 }
+
 input{
   padding:10px;
   border-radius:10px;
   border:none;
   margin:5px;
   width:100%;
-  background:#1e293b;
-  color:#fff;
+  background:var(--card);
+  color:var(--text);
 }
-.row{
-  display:flex;
-  gap:8px;
-  margin-bottom:10px;
-}
-.row input[type="text"]{flex:1;}
+
+.row{display:flex;gap:10px;margin-bottom:10px;}
 .qty{width:70px;text-align:center;}
 .hidden{display:none;}
-.lang{position:absolute;right:10px;top:10px;}
+
 #btnAdd{
   position:fixed;
   bottom:20px;
@@ -66,17 +86,21 @@ input{
   border-radius:50%;
   font-size:24px;
 }
+
+/* BOTÓN TEMA */
+#temaBtn{
+  position:absolute;
+  right:10px;
+  top:10px;
+}
 </style>
 </head>
 
-<body>
+<body class="dark">
 
 <header>
 Inventario PRO
-<select class="lang" onchange="cambiarIdioma(this.value)">
-<option value="es">ES</option>
-<option value="en">EN</option>
-</select>
+<button id="temaBtn" onclick="cambiarTema()">🎨</button>
 </header>
 
 <div class="container" id="home">
@@ -87,8 +111,8 @@ Inventario PRO
 </div>
 
 <div class="container hidden" id="detalle">
-<button onclick="volver()">⬅ Volver</button>
-<button onclick="compartir()">📤 Compartir</button>
+<button id="btnVolver" onclick="volver()">⬅</button>
+<button id="btnCompartir" onclick="compartir()">📤</button>
 
 <h3 id="titulo"></h3>
 <div id="contenido"></div>
@@ -115,11 +139,37 @@ const db = getFirestore(app);
 let actualId=null;
 let modoVista=false;
 
+// 🎨 CAMBIAR TEMA
+window.cambiarTema=()=>{
+  let body=document.body;
+  if(body.classList.contains("dark")){
+    body.classList.remove("dark");
+    body.classList.add("light");
+    localStorage.setItem("tema","light");
+  }else{
+    body.classList.remove("light");
+    body.classList.add("dark");
+    localStorage.setItem("tema","dark");
+  }
+};
+
+// CARGAR TEMA
+let t=localStorage.getItem("tema");
+if(t){
+  document.body.className=t;
+}
+
 // CREAR
 window.crear=async()=>{
 let n=nombre.value.trim();
 if(!n)return;
-await addDoc(collection(db,"listas"),{nombre:n,items:[]});
+
+await addDoc(collection(db,"listas"),{
+  nombre:n,
+  items:[],
+  estado:"pendiente"
+});
+
 nombre.value="";
 cargar();
 };
@@ -128,12 +178,19 @@ cargar();
 async function cargar(){
 listas.innerHTML="";
 let snap=await getDocs(collection(db,"listas"));
+
 snap.forEach(docu=>{
 let d=docu.data();
+
 listas.innerHTML+=`
-<div class="card">
-<div onclick="abrir('${docu.id}')">${d.nombre}</div>
-<button onclick="borrarLista('${docu.id}')">🗑️</button>
+<div class="card" onclick="abrir('${docu.id}')">
+<div>${d.nombre}</div>
+<div>Estado: ${d.estado || "pendiente"}</div>
+
+${modoVista===false?`
+<button onclick="event.stopPropagation(); borrarLista('${docu.id}')">🗑️</button>
+`:``}
+
 </div>`;
 });
 }
@@ -149,11 +206,15 @@ let d=snap.data();
 
 titulo.innerText=d.nombre;
 
-// CONTROL BOTON +
-if(modoVista!==false){
-btnAdd.style.display="none";
-}else{
+// CONTROL BOTONES
+if(modoVista===false){
+btnVolver.style.display="inline-block";
+btnCompartir.style.display="inline-block";
 btnAdd.style.display="block";
+}else{
+btnVolver.style.display="none";
+btnCompartir.style.display="none";
+btnAdd.style.display="none";
 }
 
 render(d.items);
@@ -164,7 +225,6 @@ function render(items){
 contenido.innerHTML="";
 let total=[...items];
 
-// 🔥 5 líneas para llenador
 if(modoVista==="llenar"){
 for(let i=0;i<5;i++){
 total.push({texto:"",cantidad:0});
@@ -187,11 +247,11 @@ onchange="cambiar(${i},this.value)">
 });
 }
 
-// AGREGAR (solo creador)
+// AGREGAR
 window.agregar=async()=>{
 if(modoVista!==false)return;
 
-let txt=prompt("Agregar artículo:");
+let txt=prompt("Nuevo artículo:");
 if(!txt)return;
 
 let ref=doc(db,"listas",actualId);
@@ -216,10 +276,12 @@ d.items.push({texto:"",cantidad:Number(val)});
 d.items[i].cantidad=Number(val);
 }
 
-await updateDoc(ref,{items:d.items});
+d.estado="terminado";
+
+await updateDoc(ref,{items:d.items,estado:d.estado});
 };
 
-// EDITAR TEXTO SOLO CREADOR
+// EDITAR TEXTO
 window.editarTexto=async(i,val)=>{
 if(modoVista!==false)return;
 
@@ -228,10 +290,11 @@ let snap=await getDoc(ref);
 let d=snap.data();
 
 d.items[i].texto=val;
+
 await updateDoc(ref,{items:d.items});
 };
 
-// BORRAR LISTA
+// BORRAR
 window.borrarLista=async(id)=>{
 await deleteDoc(doc(db,"listas",id));
 cargar();
@@ -240,7 +303,7 @@ cargar();
 // COMPARTIR
 window.compartir=()=>{
 let url=location.origin+location.pathname+"?id="+actualId+"&modo=llenar";
-navigator.share ? navigator.share({title:"Inventario PRO",url}) : navigator.clipboard.writeText(url);
+navigator.share ? navigator.share({url}) : navigator.clipboard.writeText(url);
 };
 
 // VOLVER
