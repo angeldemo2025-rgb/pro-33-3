@@ -6,59 +6,172 @@
 <title>Inventario PRO</title>
 
 <style>
-body{margin:0;font-family:sans-serif;background:#0f172a;color:#fff;}
-header{padding:15px;text-align:center;background:#1e293b;position:relative;}
-.container{padding:15px;}
-.card{background:#1e293b;padding:15px;margin:10px 0;border-radius:10px;}
-button{background:#22c55e;border:none;padding:8px;border-radius:8px;margin:3px;cursor:pointer;}
-input{padding:8px;border-radius:6px;border:none;margin:5px;}
-.hidden{display:none;}
-.row{display:flex;align-items:center;margin-bottom:10px;}
-.row input[type="text"]{flex:1;margin-right:5px;}
-.qty{width:60px;text-align:center;}
-.lang{position:absolute;right:10px;top:10px;}
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg,#0f172a,#020617);
+  color:#fff;
+}
+
+/* HEADER */
+header{
+  padding:18px;
+  text-align:center;
+  background: rgba(30,41,59,0.8);
+  backdrop-filter: blur(10px);
+  font-size:20px;
+  font-weight:bold;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+
+/* CONTENEDOR */
+.container{
+  padding:15px;
+  max-width:600px;
+  margin:auto;
+}
+
+/* TARJETAS */
+.card{
+  background: rgba(30,41,59,0.7);
+  backdrop-filter: blur(10px);
+  padding:15px;
+  margin:10px 0;
+  border-radius:14px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.3);
+  transition:0.2s;
+}
+
+.card:hover{
+  transform:scale(1.02);
+}
+
+/* BOTONES */
+button{
+  background: linear-gradient(135deg,#22c55e,#16a34a);
+  border:none;
+  padding:10px 12px;
+  border-radius:10px;
+  margin:4px;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+button:hover{
+  transform:scale(1.05);
+  opacity:0.9;
+}
+
+/* INPUTS */
+input{
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  margin:5px;
+  width:100%;
+  background:#1e293b;
+  color:#fff;
+}
+
+/* FILAS */
+.row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:10px;
+}
+
+/* INPUT TEXTO */
+.row input[type="text"]{
+  flex:1;
+}
+
+/* CANTIDAD */
+.qty{
+  width:70px;
+  text-align:center;
+  font-weight:bold;
+  background:#0f172a;
+  border:1px solid #334155;
+}
+
+/* BOTÓN + FLOTANTE */
+button[onclick="agregar()"]{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:55px;
+  height:55px;
+  border-radius:50%;
+  font-size:24px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.4);
+}
+
+/* SELECT IDIOMA */
+.lang{
+  position:absolute;
+  right:10px;
+  top:10px;
+  background:#020617;
+  color:#fff;
+  border:none;
+  padding:5px;
+  border-radius:6px;
+}
+
+/* SCROLL BONITO */
+::-webkit-scrollbar{
+  width:6px;
+}
+::-webkit-scrollbar-thumb{
+  background:#22c55e;
+  border-radius:10px;
+}
 </style>
 </head>
 
 <body>
 
 <header>
-  Inventario PRO
-  <select class="lang" onchange="cambiarIdioma(this.value)">
-    <option value="es">ES</option>
-    <option value="en">EN</option>
-  </select>
+Inventario PRO
+<select class="lang" onchange="cambiarIdioma(this.value)">
+<option value="es">ES</option>
+<option value="en">EN</option>
+</select>
 </header>
 
 <div class="container" id="home">
-  <input id="nombre">
-  <button onclick="crear()" id="btnCrear"></button>
-
-  <h3 id="tituloListas"></h3>
-  <div id="listas"></div>
+<input id="nombre">
+<button onclick="crear()" id="btnCrear"></button>
+<h3 id="tituloListas"></h3>
+<div id="listas"></div>
 </div>
 
 <div class="container hidden" id="detalle">
-  <button onclick="volver()" id="btnVolver"></button>
-  <button onclick="compartir()" id="btnCompartir"></button>
+<button onclick="volver()" id="btnVolver"></button>
+<button onclick="compartir()" id="btnCompartir"></button>
 
-  <h3 id="titulo"></h3>
-  <div id="contenido"></div>
+<h3 id="titulo"></h3>
+<div id="contenido"></div>
 
-  <input id="nuevo">
-  <button onclick="agregar()">+</button>
+<button onclick="agregar()">➕</button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔥 FIREBASE (TU CONFIG COMPLETA)
 const firebaseConfig = {
   apiKey: "AIzaSyCVjGdI5Z3fW8bjHwfBgT5RoOfZZ4Vap8c",
   authDomain: "checklistempresa.firebaseapp.com",
   projectId: "checklistempresa",
-  storageBucket: "checklistempresa.firebasestorage.com",
+  storageBucket: "checklistempresa.appspot.com",
   messagingSenderId: "798095528680",
   appId: "1:798095528680:web:3114c0b18d5b8001826f5d"
 };
@@ -70,166 +183,138 @@ let actualId=null;
 let modoVista=false;
 let idioma="es";
 
-// 🌎 TEXTOS
+// TEXTOS
 const textos={
-  es:{
-    crear:"Crear",
-    listas:"Listas",
-    volver:"⬅ Volver",
-    compartir:"📤 Compartir",
-    nombre:"Nombre lista",
-    articulo:"Artículo"
-  },
-  en:{
-    crear:"Create",
-    listas:"Lists",
-    volver:"⬅ Back",
-    compartir:"📤 Share",
-    nombre:"List name",
-    articulo:"Item"
-  }
+es:{crear:"Crear",listas:"Listas",volver:"⬅ Volver",compartir:"📤 Compartir",nombre:"Nombre lista"},
+en:{crear:"Create",listas:"Lists",volver:"⬅ Back",compartir:"📤 Share",nombre:"List name"}
 };
 
-// IDIOMA
-window.cambiarIdioma=(lang)=>{
-  idioma=lang;
-  aplicarIdioma();
-};
+window.cambiarIdioma=(l)=>{idioma=l;aplicarIdioma();};
 
 function aplicarIdioma(){
-  btnCrear.innerText=textos[idioma].crear;
-  tituloListas.innerText=textos[idioma].listas;
-  btnVolver.innerText=textos[idioma].volver;
-  btnCompartir.innerText=textos[idioma].compartir;
-  nombre.placeholder=textos[idioma].nombre;
-  nuevo.placeholder=textos[idioma].articulo;
+btnCrear.innerText=textos[idioma].crear;
+tituloListas.innerText=textos[idioma].listas;
+btnVolver.innerText=textos[idioma].volver;
+btnCompartir.innerText=textos[idioma].compartir;
+nombre.placeholder=textos[idioma].nombre;
 }
 
 // CREAR
 window.crear=async()=>{
-  let n=nombre.value.trim();
-  if(!n)return;
-  await addDoc(collection(db,"listas"),{nombre:n,items:[]});
-  nombre.value="";
-  cargar();
+let n=nombre.value.trim();
+if(!n)return;
+await addDoc(collection(db,"listas"),{nombre:n,items:[]});
+nombre.value="";
+cargar();
 };
 
 // CARGAR
 async function cargar(){
-  listas.innerHTML="";
-  let snap=await getDocs(collection(db,"listas"));
-  snap.forEach(docu=>{
-    let d=docu.data();
-    listas.innerHTML+=`
-    <div class="card">
-      <div onclick="abrir('${docu.id}')">${d.nombre}</div>
-      <button onclick="borrarLista('${docu.id}')">🗑️</button>
-    </div>`;
-  });
+listas.innerHTML="";
+let snap=await getDocs(collection(db,"listas"));
+snap.forEach(docu=>{
+let d=docu.data();
+listas.innerHTML+=`
+<div class="card">
+<div onclick="abrir('${docu.id}')">${d.nombre}</div>
+<button onclick="borrarLista('${docu.id}')">🗑️</button>
+</div>`;
+});
 }
 
 // ABRIR
 window.abrir=async(id)=>{
-  actualId=id;
-  home.classList.add("hidden");
-  detalle.classList.remove("hidden");
+actualId=id;
+home.classList.add("hidden");
+detalle.classList.remove("hidden");
 
-  let snap=await getDoc(doc(db,"listas",id));
-  let d=snap.data();
+let snap=await getDoc(doc(db,"listas",id));
+let d=snap.data();
 
-  titulo.innerText=d.nombre;
-  render(d.items);
+titulo.innerText=d.nombre;
+render(d.items);
 };
 
 // RENDER
 function render(items){
-  contenido.innerHTML="";
-  let total=[...items];
+contenido.innerHTML="";
+let total=[...items];
 
-  if(modoVista==="llenar"){
-    for(let i=0;i<6;i++) total.push({texto:"",cantidad:1});
-  }
-
-  total.forEach((it,i)=>{
-    contenido.innerHTML+=`
-    <div class="row">
-      <input type="text" value="${it.texto}" 
-      placeholder="${textos[idioma].articulo}"
-      ${modoVista===true?"disabled":""}
-      onchange="editarTexto(${i},this.value)">
-
-      <input class="qty" type="number" value="${it.cantidad}"
-      ${modoVista===true?"disabled":""}
-      onchange="cambiar(${i},this.value)">
-    </div>`;
-  });
+if(modoVista==="llenar"){
+for(let i=0;i<6;i++) total.push({texto:"",cantidad:1});
 }
 
-// AGREGAR
+total.forEach((it,i)=>{
+contenido.innerHTML+=`
+<div class="row">
+
+<input type="text" value="${it.texto}"
+${modoVista!==false?"disabled":""}
+onchange="editarTexto(${i},this.value)">
+
+<input class="qty" type="number" value="${it.cantidad}"
+${modoVista===true?"disabled":""}
+onchange="cambiar(${i},this.value)">
+
+</div>`;
+});
+}
+
+// AGREGAR (BOTÓN +)
 window.agregar=async()=>{
-  if(modoVista)return;
-  let txt=nuevo.value.trim();
-  if(!txt)return;
+if(modoVista!==false)return;
 
-  let ref=doc(db,"listas",actualId);
-  let snap=await getDoc(ref);
-  let d=snap.data();
+let txt=prompt("Agregar artículo:");
+if(!txt)return;
 
-  d.items.push({texto:txt,cantidad:1});
-  await updateDoc(ref,{items:d.items});
-  nuevo.value="";
-  render(d.items);
+let ref=doc(db,"listas",actualId);
+let snap=await getDoc(ref);
+let d=snap.data();
+
+d.items.push({texto:txt,cantidad:1});
+await updateDoc(ref,{items:d.items});
+render(d.items);
 };
 
 // CAMBIAR
 window.cambiar=async(i,val)=>{
-  let ref=doc(db,"listas",actualId);
-  let snap=await getDoc(ref);
-  let d=snap.data();
+let ref=doc(db,"listas",actualId);
+let snap=await getDoc(ref);
+let d=snap.data();
 
-  if(i>=d.items.length)return;
-  d.items[i].cantidad=Number(val);
-  await updateDoc(ref,{items:d.items});
+if(i>=d.items.length)return;
+d.items[i].cantidad=Number(val);
+await updateDoc(ref,{items:d.items});
 };
 
-// EDITAR TEXTO
+// EDITAR SOLO CREADOR
 window.editarTexto=async(i,val)=>{
-  if(modoVista===true)return;
+if(modoVista!==false)return;
 
-  let ref=doc(db,"listas",actualId);
-  let snap=await getDoc(ref);
-  let d=snap.data();
+let ref=doc(db,"listas",actualId);
+let snap=await getDoc(ref);
+let d=snap.data();
 
-  if(i>=d.items.length){
-    if(!val.trim())return;
-    d.items.push({texto:val,cantidad:1});
-  }else{
-    d.items[i].texto=val;
-  }
-
-  await updateDoc(ref,{items:d.items});
+d.items[i].texto=val;
+await updateDoc(ref,{items:d.items});
 };
 
 // BORRAR LISTA
 window.borrarLista=async(id)=>{
-  await deleteDoc(doc(db,"listas",id));
-  cargar();
+await deleteDoc(doc(db,"listas",id));
+cargar();
 };
 
 // COMPARTIR
 window.compartir=()=>{
-  let url=location.origin+location.pathname+"?id="+actualId+"&modo=llenar";
+let url=location.origin+location.pathname+"?id="+actualId+"&modo=llenar";
 
-  if(navigator.share){
-    navigator.share({
-      title:"Inventario PRO",
-      text:"Llena las cantidades:",
-      url:url
-    });
-  }else{
-    navigator.clipboard.writeText(url);
-    alert("Link copiado");
-  }
+if(navigator.share){
+navigator.share({title:"Inventario PRO",text:"Llena cantidades:",url:url});
+}else{
+navigator.clipboard.writeText(url);
+alert("Link copiado");
+}
 };
 
 // VOLVER
@@ -237,28 +322,24 @@ window.volver=()=>location.href=location.pathname;
 
 // INIT
 function init(){
-  let p=new URLSearchParams(location.search);
-  let id=p.get("id");
-  let tipo=p.get("modo");
+let p=new URLSearchParams(location.search);
+let id=p.get("id");
+let tipo=p.get("modo");
 
-  if(id){
-    if(tipo==="llenar"){
-      modoVista="llenar";
-    }else if(tipo==="ver"){
-      modoVista=true;
-    }else{
-      modoVista=false;
-    }
-    abrir(id);
-  }else{
-    cargar();
-  }
+if(id){
+if(tipo==="llenar")modoVista="llenar";
+else if(tipo==="ver")modoVista=true;
+else modoVista=false;
 
-  aplicarIdioma();
+abrir(id);
+}else{
+cargar();
+}
+
+aplicarIdioma();
 }
 
 init();
-
 </script>
 
 </body>
