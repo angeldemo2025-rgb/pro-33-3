@@ -6,36 +6,49 @@
 <title>Inventario PRO</title>
 
 <style>
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#fff;
+  --btn:#22c55e;
+}
+.light{
+  --bg:#e2e8f0;
+  --card:#fff;
+  --text:#000;
+}
+
 body{
   margin:0;
   font-family:sans-serif;
-  background:#0f172a;
-  color:#fff;
+  background:var(--bg);
+  color:var(--text);
 }
+
 header{
   padding:15px;
   text-align:center;
-  background:#1e293b;
+  background:var(--card);
   font-size:20px;
   font-weight:bold;
 }
+
 .container{padding:15px;}
 
 .card{
-  background:#1e293b;
+  background:var(--card);
   padding:15px;
-  margin:10px 0;
   border-radius:12px;
+  margin-bottom:10px;
 }
 
 button{
-  background:#22c55e;
+  background:var(--btn);
   border:none;
   padding:10px;
   border-radius:8px;
   margin:5px;
   cursor:pointer;
-  color:#fff;
 }
 
 input{
@@ -47,58 +60,58 @@ input{
 
 .row{
   display:flex;
-  gap:10px;
+  gap:5px;
   margin-bottom:10px;
 }
 
-.row input[type="text"]{flex:1;}
+.row input[type=text]{flex:1;}
 .qty{width:70px;text-align:center;}
 
-.hidden{display:none;}
-
-.fab{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  background:#22c55e;
-  width:60px;
-  height:60px;
-  border-radius:50%;
-  font-size:30px;
+.top{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:10px;
 }
 </style>
 </head>
 
 <body>
 
-<header>Inventario PRO</header>
+<header>
+Inventario PRO
+</header>
 
 <div class="container">
 
-<!-- CREAR -->
-<div id="crearBox">
-  <input id="nombreLista" placeholder="Nombre lista">
-  <button onclick="crear()">Crear</button>
+<div class="top">
+<select onchange="cambiarIdioma(this.value)">
+<option value="es">ES</option>
+<option value="en">EN</option>
+</select>
+
+<button onclick="cambiarTema()">🎨</button>
 </div>
 
-<!-- LISTAS -->
+<div id="home">
+<input id="nombreLista" placeholder="Nombre lista">
+<button onclick="crearLista()">Crear</button>
+
+<h3>Listas</h3>
 <div id="listas"></div>
-
-<!-- DETALLE -->
-<div id="detalle" class="hidden">
-  <h2 id="titulo"></h2>
-
-  <div id="items"></div>
-
-  <button id="btnVolver" onclick="volver()">← Volver</button>
-  <button id="btnCompartir" onclick="compartir()">📤 Compartir</button>
 </div>
 
-<button id="btnAgregar" class="fab" onclick="agregar()">+</button>
+<div id="detalle" style="display:none;">
+<h2 id="titulo"></h2>
+
+<div id="items"></div>
+
+<div id="acciones"></div>
+</div>
 
 </div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -106,7 +119,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCVjGdI5Z3fW8bjHwfBgT5RoOfZZ4Vap8c",
   authDomain: "checklistempresa.firebaseapp.com",
   projectId: "checklistempresa",
-  storageBucket: "checklistempresa.appspot.app",
+  storageBucket: "checklistempresa.firebasestorage.app",
   messagingSenderId: "798095528680",
   appId: "1:798095528680:web:3114c0b18d5b8001826f5d"
 };
@@ -115,47 +128,68 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let actualId=null;
-let modoVista=false; // false=creador, "llenar", true=ver
+let modo="creador";
+let idioma="es";
 
-// 🔹 CREAR LISTA
-window.crear = async()=>{
+// 🌐 IDIOMA
+function t(txt){
+  const textos={
+    es:{crear:"Crear",volver:"Volver",compartir:"Compartir"},
+    en:{crear:"Create",volver:"Back",compartir:"Share"}
+  };
+  return textos[idioma][txt]||txt;
+}
+
+window.cambiarIdioma=(v)=>{
+  idioma=v;
+  cargarListas();
+};
+
+// 🎨 TEMA
+window.cambiarTema=()=>{
+  document.body.classList.toggle("light");
+};
+
+// CREAR
+window.crearLista=async()=>{
   let nombre=document.getElementById("nombreLista").value;
-  if(!nombre)return;
+  if(!nombre) return;
 
   await addDoc(collection(db,"listas"),{
     nombre,
     items:[]
   });
 
-  cargar();
-}
+  cargarListas();
+};
 
-// 🔹 CARGAR LISTAS
-async function cargar(){
+// LISTAS
+async function cargarListas(){
   let cont=document.getElementById("listas");
   cont.innerHTML="";
 
-  let data=await getDocs(collection(db,"listas"));
-  data.forEach(docu=>{
-    let d=docu.data();
+  let snap=await getDocs(collection(db,"listas"));
+
+  snap.forEach(d=>{
+    let data=d.data();
 
     cont.innerHTML+=`
-    <div class="card" onclick="abrir('${docu.id}')">
-      ${d.nombre}
+    <div class="card">
+      ${data.nombre}
+      <br>
+      <button onclick="abrir('${d.id}')">Abrir</button>
     </div>`;
   });
 }
 
-// 🔹 ABRIR
-window.abrir = async(id)=>{
+// ABRIR
+window.abrir=async(id)=>{
   actualId=id;
+  document.getElementById("home").style.display="none";
+  document.getElementById("detalle").style.display="block";
 
-  document.getElementById("crearBox").classList.add("hidden");
-  document.getElementById("listas").classList.add("hidden");
-  document.getElementById("detalle").classList.remove("hidden");
-
-  let docRef=doc(db,"listas",id);
-  let snap=await getDoc(docRef);
+  let ref=doc(db,"listas",id);
+  let snap=await getDoc(ref);
   let data=snap.data();
 
   document.getElementById("titulo").innerText=data.nombre;
@@ -163,146 +197,129 @@ window.abrir = async(id)=>{
   let cont=document.getElementById("items");
   cont.innerHTML="";
 
-  data.items.forEach((item,i)=>{
-    let row=document.createElement("div");
-    row.className="row";
-
-    let a=document.createElement("input");
-    let c=document.createElement("input");
-
-    a.value=item.nombre;
-    c.value=item.cantidad;
-
-    a.type="text";
-    c.type="number";
-    c.className="qty";
-
-    // 🔥 CONTROL MODOS
-    if(modoVista===true){
-      a.disabled=true;
-      c.disabled=true;
-    }
-    else if(modoVista==="llenar"){
-      a.disabled=true;
-      c.disabled=false;
-    }
-
-    c.onchange=async()=>{
-      let nuevos=data.items;
-      nuevos[i].cantidad=c.value;
-
-      await updateDoc(docRef,{items:nuevos});
-    };
-
-    row.appendChild(a);
-    row.appendChild(c);
-    cont.appendChild(row);
+  data.items.forEach((it,i)=>{
+    cont.innerHTML+=`
+    <div class="row">
+      <input value="${it.nombre||""}" ${modo!="creador"?"disabled":""}
+      onchange="editar(${i},this.value)">
+      <input class="qty" value="${it.cantidad||0}"
+      ${modo=="ver"?"disabled":""}
+      onchange="cantidad(${i},this.value)">
+      ${modo=="creador"?`<button onclick="borrar(${i})">🗑</button>`:""}
+    </div>`;
   });
 
-  // 🔹 SI ES LLENADOR AGREGA 5 ESPACIOS
-  if(modoVista==="llenar"){
+  // ➕ 5 extras para llenador
+  if(modo=="llenar"){
     for(let i=0;i<5;i++){
-      let row=document.createElement("div");
-      row.className="row";
-
-      let a=document.createElement("input");
-      let c=document.createElement("input");
-
-      a.placeholder="Nuevo artículo";
-      c.placeholder="0";
-
-      c.className="qty";
-
-      c.onchange=async()=>{
-        let nuevos=data.items;
-        nuevos.push({nombre:a.value,cantidad:c.value});
-        await updateDoc(docRef,{items:nuevos});
-      };
-
-      row.appendChild(a);
-      row.appendChild(c);
-      cont.appendChild(row);
+      cont.innerHTML+=`
+      <div class="row">
+        <input placeholder="Nuevo artículo" onchange="nuevoNombre(this)">
+        <input class="qty" value="0" onchange="nuevoCantidad(this)">
+      </div>`;
     }
   }
 
-  controlarUI();
-}
+  let acciones=document.getElementById("acciones");
+  acciones.innerHTML="";
 
-// 🔹 AGREGAR (SOLO CREADOR)
+  if(modo=="creador"){
+    acciones.innerHTML=`
+    <button onclick="agregar()">+ Artículo</button>
+    <button onclick="compartir('llenar')">${t("compartir")}</button>
+    <button onclick="volver()">${t("volver")}</button>`;
+  }
+
+  if(modo=="llenar"){
+    acciones.innerHTML=`
+    <button onclick="compartir('ver')">${t("compartir")}</button>`;
+  }
+
+  if(modo=="ver"){
+    acciones.innerHTML=""; // 🔒 SIN BOTONES
+  }
+};
+
+// EDITAR
+window.editar=async(i,val)=>{
+  let ref=doc(db,"listas",actualId);
+  let snap=await getDoc(ref);
+  let data=snap.data();
+
+  data.items[i].nombre=val;
+
+  await updateDoc(ref,{items:data.items});
+};
+
+// CANTIDAD
+window.cantidad=async(i,val)=>{
+  let ref=doc(db,"listas",actualId);
+  let snap=await getDoc(ref);
+  let data=snap.data();
+
+  data.items[i].cantidad=val;
+
+  await updateDoc(ref,{items:data.items});
+};
+
+// AGREGAR
 window.agregar=async()=>{
-  if(modoVista!==false)return;
-
-  let docRef=doc(db,"listas",actualId);
-  let snap=await getDoc(docRef);
+  let ref=doc(db,"listas",actualId);
+  let snap=await getDoc(ref);
   let data=snap.data();
 
   data.items.push({nombre:"",cantidad:0});
-  await updateDoc(docRef,{items:data.items});
 
+  await updateDoc(ref,{items:data.items});
   abrir(actualId);
-}
+};
 
-// 🔹 VOLVER
-window.volver=()=>{
-  location.href=location.pathname;
-}
+// BORRAR
+window.borrar=async(i)=>{
+  let ref=doc(db,"listas",actualId);
+  let snap=await getDoc(ref);
+  let data=snap.data();
 
-// 🔹 COMPARTIR
-window.compartir=()=>{
-  let url="";
+  data.items.splice(i,1);
 
-  if(modoVista===false){
-    url=location.origin+location.pathname+"?id="+actualId+"&modo=llenar";
-  }
-  else if(modoVista==="llenar"){
-    url=location.origin+location.pathname+"?id="+actualId+"&modo=ver";
-  }else return;
+  await updateDoc(ref,{items:data.items});
+  abrir(actualId);
+};
+
+// COMPARTIR
+window.compartir=(tipo)=>{
+  let url=location.origin+location.pathname+"?id="+actualId+"&modo="+tipo;
 
   if(navigator.share){
-    navigator.share({title:"Inventario PRO",url});
+    navigator.share({url});
   }else{
     navigator.clipboard.writeText(url);
     alert("Link copiado");
   }
-}
+};
 
-// 🔹 CONTROL UI
-function controlarUI(){
-  let v=document.getElementById("btnVolver");
-  let c=document.getElementById("btnCompartir");
-  let a=document.getElementById("btnAgregar");
+// VOLVER
+window.volver=()=>{
+  location.href=location.pathname;
+};
 
-  if(modoVista===true){
-    v.style.display="none";
-    c.style.display="none";
-    a.style.display="none";
-  }
-
-  if(modoVista==="llenar"){
-    v.style.display="none";
-    a.style.display="none";
-  }
-}
-
-// 🔹 INIT
+// INIT
 async function init(){
   let p=new URLSearchParams(location.search);
   let id=p.get("id");
-  let tipo=p.get("modo");
+  let m=p.get("modo");
 
   if(id){
-    if(tipo==="llenar") modoVista="llenar";
-    else if(tipo==="ver") modoVista=true;
-    else modoVista=false;
-
+    actualId=id;
+    modo=m||"creador";
     abrir(id);
   }else{
-    cargar();
+    cargarListas();
   }
 }
 
 init();
-</script>
 
+</script>
 </body>
 </html>
