@@ -7,15 +7,12 @@
 
 <style>
 *{box-sizing:border-box;}
-
 body{
   margin:0;
-  font-family: 'Segoe UI', sans-serif;
+  font-family:sans-serif;
   background: linear-gradient(135deg,#0f172a,#020617);
   color:#fff;
 }
-
-/* HEADER */
 header{
   padding:18px;
   text-align:center;
@@ -25,50 +22,23 @@ header{
   font-weight:bold;
   position:sticky;
   top:0;
-  z-index:10;
 }
-
-/* CONTENEDOR */
-.container{
-  padding:15px;
-  max-width:600px;
-  margin:auto;
-}
-
-/* TARJETAS */
+.container{padding:15px;max-width:600px;margin:auto;}
 .card{
   background: rgba(30,41,59,0.7);
-  backdrop-filter: blur(10px);
   padding:15px;
   margin:10px 0;
   border-radius:14px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.3);
-  transition:0.2s;
 }
-
-.card:hover{
-  transform:scale(1.02);
-}
-
-/* BOTONES */
 button{
-  background: linear-gradient(135deg,#22c55e,#16a34a);
+  background:#22c55e;
   border:none;
-  padding:10px 12px;
+  padding:10px;
   border-radius:10px;
   margin:4px;
   color:#fff;
-  font-weight:bold;
   cursor:pointer;
-  transition:0.2s;
 }
-
-button:hover{
-  transform:scale(1.05);
-  opacity:0.9;
-}
-
-/* INPUTS */
 input{
   padding:10px;
   border-radius:10px;
@@ -78,31 +48,16 @@ input{
   background:#1e293b;
   color:#fff;
 }
-
-/* FILAS */
 .row{
   display:flex;
-  align-items:center;
   gap:8px;
   margin-bottom:10px;
 }
-
-/* INPUT TEXTO */
-.row input[type="text"]{
-  flex:1;
-}
-
-/* CANTIDAD */
-.qty{
-  width:70px;
-  text-align:center;
-  font-weight:bold;
-  background:#0f172a;
-  border:1px solid #334155;
-}
-
-/* BOTÓN + FLOTANTE */
-button[onclick="agregar()"]{
+.row input[type="text"]{flex:1;}
+.qty{width:70px;text-align:center;}
+.hidden{display:none;}
+.lang{position:absolute;right:10px;top:10px;}
+#btnAdd{
   position:fixed;
   bottom:20px;
   right:20px;
@@ -110,28 +65,6 @@ button[onclick="agregar()"]{
   height:55px;
   border-radius:50%;
   font-size:24px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.4);
-}
-
-/* SELECT IDIOMA */
-.lang{
-  position:absolute;
-  right:10px;
-  top:10px;
-  background:#020617;
-  color:#fff;
-  border:none;
-  padding:5px;
-  border-radius:6px;
-}
-
-/* SCROLL BONITO */
-::-webkit-scrollbar{
-  width:6px;
-}
-::-webkit-scrollbar-thumb{
-  background:#22c55e;
-  border-radius:10px;
 }
 </style>
 </head>
@@ -147,20 +80,20 @@ Inventario PRO
 </header>
 
 <div class="container" id="home">
-<input id="nombre">
-<button onclick="crear()" id="btnCrear"></button>
-<h3 id="tituloListas"></h3>
+<input id="nombre" placeholder="Nombre lista">
+<button onclick="crear()">Crear</button>
+<h3>Listas</h3>
 <div id="listas"></div>
 </div>
 
 <div class="container hidden" id="detalle">
-<button onclick="volver()" id="btnVolver"></button>
-<button onclick="compartir()" id="btnCompartir"></button>
+<button onclick="volver()">⬅ Volver</button>
+<button onclick="compartir()">📤 Compartir</button>
 
 <h3 id="titulo"></h3>
 <div id="contenido"></div>
 
-<button onclick="agregar()">➕</button>
+<button id="btnAdd" onclick="agregar()">➕</button>
 </div>
 
 <script type="module">
@@ -181,23 +114,6 @@ const db = getFirestore(app);
 
 let actualId=null;
 let modoVista=false;
-let idioma="es";
-
-// TEXTOS
-const textos={
-es:{crear:"Crear",listas:"Listas",volver:"⬅ Volver",compartir:"📤 Compartir",nombre:"Nombre lista"},
-en:{crear:"Create",listas:"Lists",volver:"⬅ Back",compartir:"📤 Share",nombre:"List name"}
-};
-
-window.cambiarIdioma=(l)=>{idioma=l;aplicarIdioma();};
-
-function aplicarIdioma(){
-btnCrear.innerText=textos[idioma].crear;
-tituloListas.innerText=textos[idioma].listas;
-btnVolver.innerText=textos[idioma].volver;
-btnCompartir.innerText=textos[idioma].compartir;
-nombre.placeholder=textos[idioma].nombre;
-}
 
 // CREAR
 window.crear=async()=>{
@@ -232,6 +148,14 @@ let snap=await getDoc(doc(db,"listas",id));
 let d=snap.data();
 
 titulo.innerText=d.nombre;
+
+// CONTROL BOTON +
+if(modoVista!==false){
+btnAdd.style.display="none";
+}else{
+btnAdd.style.display="block";
+}
+
 render(d.items);
 };
 
@@ -240,19 +164,22 @@ function render(items){
 contenido.innerHTML="";
 let total=[...items];
 
+// 🔥 5 líneas para llenador
 if(modoVista==="llenar"){
-for(let i=0;i<6;i++) total.push({texto:"",cantidad:1});
+for(let i=0;i<5;i++){
+total.push({texto:"",cantidad:0});
+}
 }
 
 total.forEach((it,i)=>{
 contenido.innerHTML+=`
 <div class="row">
 
-<input type="text" value="${it.texto}"
+<input type="text" value="${it.texto || ""}"
 ${modoVista!==false?"disabled":""}
 onchange="editarTexto(${i},this.value)">
 
-<input class="qty" type="number" value="${it.cantidad}"
+<input class="qty" type="number" value="${it.cantidad || 0}"
 ${modoVista===true?"disabled":""}
 onchange="cambiar(${i},this.value)">
 
@@ -260,7 +187,7 @@ onchange="cambiar(${i},this.value)">
 });
 }
 
-// AGREGAR (BOTÓN +)
+// AGREGAR (solo creador)
 window.agregar=async()=>{
 if(modoVista!==false)return;
 
@@ -282,12 +209,17 @@ let ref=doc(db,"listas",actualId);
 let snap=await getDoc(ref);
 let d=snap.data();
 
-if(i>=d.items.length)return;
+if(i>=d.items.length){
+if(!val)return;
+d.items.push({texto:"",cantidad:Number(val)});
+}else{
 d.items[i].cantidad=Number(val);
+}
+
 await updateDoc(ref,{items:d.items});
 };
 
-// EDITAR SOLO CREADOR
+// EDITAR TEXTO SOLO CREADOR
 window.editarTexto=async(i,val)=>{
 if(modoVista!==false)return;
 
@@ -308,13 +240,7 @@ cargar();
 // COMPARTIR
 window.compartir=()=>{
 let url=location.origin+location.pathname+"?id="+actualId+"&modo=llenar";
-
-if(navigator.share){
-navigator.share({title:"Inventario PRO",text:"Llena cantidades:",url:url});
-}else{
-navigator.clipboard.writeText(url);
-alert("Link copiado");
-}
+navigator.share ? navigator.share({title:"Inventario PRO",url}) : navigator.clipboard.writeText(url);
 };
 
 // VOLVER
@@ -335,8 +261,6 @@ abrir(id);
 }else{
 cargar();
 }
-
-aplicarIdioma();
 }
 
 init();
