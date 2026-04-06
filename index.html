@@ -209,13 +209,14 @@ window.abrir=async(id)=>{
     </div>`;
   });
 
-  // ➕ 5 extras para llenador
+  // ➕ 7 extras para llenador
   if(modo=="llenar"){
+    
     for(let i=0;i<5;i++){
       cont.innerHTML+=`
       <div class="row">
-        <input placeholder="Nuevo artículo" onchange="nuevoNombre(this)">
-        <input class="qty" value="0" onchange="nuevoCantidad(this)">
+        <input placeholder="Nuevo artículo" oninput="nuevoNombre(this)">
+        <input class="qty" value="0" oninput="nuevoCantidad(this)">
       </div>`;
     }
   }
